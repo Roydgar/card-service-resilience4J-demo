@@ -93,6 +93,8 @@ public class CardAsyncImportService {
                 // TODO: persist more detailed error messages if needed depending on error status code if needed
             } catch (FeignException | CallNotPermittedException e) {
                 log.error("Failed to connect to Scryfall API for batch of {} cards", batchOfCardNames.size(), e);
+                // WARNING: EXCEPTION MESSAGE EXPOSES INTERNAL ERROR DETAILS, CONSIDER SECURITY IMPLICATIONS!!!
+                // DO NOT SAVE THE EXCEPTION ITSELF, AS IT MAY CONTAIN SENSITIVE INFORMATION
                 errorEntities.addAll(entityMapper.namesToCardImportErrorEntities(batchOfCardNames, operationEntity, e.getMessage()));
             }
         }

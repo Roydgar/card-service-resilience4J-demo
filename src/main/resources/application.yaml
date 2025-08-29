@@ -51,7 +51,7 @@ resilience4j:
   ratelimiter:
     instances:
       scryfall-rate-limiter:
-        limit-for-period: 1
+        limit-for-period: 8
         limit-refresh-period: 1s
         timeout-duration: 5000ms
   retry:
