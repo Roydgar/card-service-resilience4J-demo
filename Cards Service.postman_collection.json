@@ -1,0 +1,101 @@
+{
+	"info": {
+		"_postman_id": "d551303e-0eb0-43e1-b256-3849ab6d57d0",
+		"name": "Cards Service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "8672082"
+	},
+	"item": [
+		{
+			"name": "Fetch Cards",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"cardNames\": [\r\n        \"Black Lotus\",\r\n         \"Time Walk\",\r\n         \"Lightning Bolt\",\r\n         \"ljklfjsdaklfjKLJFLKSDJFKLSDJFklsd\"\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{card-service-base-url}}/api/v1/cards/import",
+					"host": [
+						"{{card-service-base-url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"cards",
+						"import"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Cards",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"cardNames\": [\r\n        \"Black Lotus\",\r\n         \"Time Walk\",\r\n         \"Lightning Bolt\",\r\n         \"ljklfjsdaklfjKLJFLK:SDJFKL:SDJFk;lsd\"\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{card-service-base-url}}/api/v1/cards?operationId=08aa8373-b605-4dc3-ad73-78c1e38d8658",
+					"host": [
+						"{{card-service-base-url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"cards"
+					],
+					"query": [
+						{
+							"key": "operationId",
+							"value": "08aa8373-b605-4dc3-ad73-78c1e38d8658"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Health",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{card-service-base-url}}/actuator/health",
+					"host": [
+						"{{card-service-base-url}}"
+					],
+					"path": [
+						"actuator",
+						"health"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "card-service-base-url",
+			"value": "",
+			"type": "default"
+		}
+	]
+}

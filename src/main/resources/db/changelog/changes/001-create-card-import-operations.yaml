@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-card-import-operations
+      author: yourname
+      changes:
+        - createTable:
+            tableName: card_import_operations
+            columns:
+              - column:
+                  name: operation_id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
