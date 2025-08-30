@@ -65,6 +65,12 @@ public class CardAsyncImportService implements  CardImportService {
      * @param cardNames   the list of card names to import
      * @param operationId the unique identifier of the card import operation
      */
+    // Alternate approach to consider: Utilize non-blocking WebFlux client based on Project reactor to handle asynchronous calls more efficiently.
+    // This would allow better resource utilization and scalability, especially under high load.
+    // However, this would require significant changes to the existing synchronous codebase and careful handling of reactive streams.
+    // Reactive programming introduces complexity in development, debugging, and maintenance, so it should be adopted only if the benefits outweigh these challenges.
+    // For simplicity and maintainability, the current approach using @Async is chosen. Moreover, only 1 - 100 card names are typically imported at once (basically two API calls),
+    // so the performance gain from a reactive approach may be negligible in this context.
     @Async
     @Override
     public void importCardsByNames(List<String> cardNames, UUID operationId) {
