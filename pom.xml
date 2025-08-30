@@ -33,6 +33,9 @@
         <liquibase.version>4.33.0</liquibase.version>
         <assertj.version>3.27.4</assertj.version>
 	</properties>
+
+    # TODO: introduce static code analysis tools like SonarQube, Checkstyle, PMD, SpotBugs, etc.
+    # TODO: introduce vulnerability scanning tools like Fortify, Twistlock.
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -61,10 +64,6 @@
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-retry</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-ratelimiter</artifactId>
         </dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>

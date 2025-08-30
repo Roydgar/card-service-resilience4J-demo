@@ -43,17 +43,7 @@ feign:
         retryer: "never" # Use Resilience4j retry mechanism instead
 
 # Default, can be environment-specific overrides in application-{profile}.yaml
-# Rate limiter helps to ensure we don't exceed Scryfall's recommended request rate:
-# """ We kindly ask that you insert 50 – 100 milliseconds of delay between the requests you send to the server at api.scryfall.com. (i.e., 10 requests per second on average). """
-# """ Submitting excessive requests to the server may result in a HTTP 429 Too Many Requests status code. """
-#
 resilience4j:
-  ratelimiter:
-    instances:
-      scryfall-rate-limiter:
-        limit-for-period: 8
-        limit-refresh-period: 1s
-        timeout-duration: 5000ms
   retry:
     instances:
       scryfall-api-retry:

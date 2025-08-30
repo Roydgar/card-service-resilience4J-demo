@@ -15,13 +15,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CardService {
     private final CardImportOperationRepository cardImportOperationRepository;
-    private final CardAsyncImportService cardAsyncImportService;
+    private final CardImportService cardImportService;
 
     public UUID importCards(List<String> cardNames) {
         UUID operationId = UUID.randomUUID();
         log.info("Importing {} cards with operation ID: {}", cardNames.size(), operationId);
 
-        cardAsyncImportService.importCardsByNames(cardNames, operationId);
+        cardImportService.importCardsByNames(cardNames, operationId);
 
         return operationId;
     }

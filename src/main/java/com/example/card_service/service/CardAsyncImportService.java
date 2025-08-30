@@ -32,7 +32,9 @@ import java.util.UUID;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class CardAsyncImportService {
+public class CardAsyncImportService implements  CardImportService {
+    // TODO: make it configurable if needed
+    // API limitation - max 75 cards per request
     private static final int BATCH_SIZE = 75;
     public static final String CARD_NOT_FOUND_MESSAGE = "Card not found in Scryfall API";
 
@@ -43,6 +45,7 @@ public class CardAsyncImportService {
     private final CardEntityMapper entityMapper;
     private final CardRequestResponseMapper requestMapper;
 
+    // Can be avoided by using a separate service for the @Transactional method
     private @Lazy @Autowired CardAsyncImportService self;
 
     /**
@@ -50,35 +53,43 @@ public class CardAsyncImportService {
      *
      * <p><b>Transaction flow:</b>
      * <ol>
-     *     <li>{@link #createOperation(UUID)} is executed in a separate transaction and is always committed,
-     *         ensuring that the operation record exists even if the import fails.</li>
-     *     <li>{@code importCardsByNames()} runs in the main transaction. If this transaction fails,
-     *         all changes within it are rolled back, but the operation record remains.</li>
+     *     <li>{@link #createOperation(UUID)} atomically creates an operation record exists even if the import fails.</li>
+     *     <li>{@link #doImport(List, CardImportOperationEntity)} always runs in its own transaction, fetches the cards
+     *          from Scryfall API and commits all the results.  If transaction fails, it rollbacks and operation status
+     *          is updated to FAILURE. If it succeeds, the operation status is resolved based on the results and updated.
+     *     </li>
+     *     <li>In this way, the operation record is always created and its status is always updated to reflect the final state of the import.</li>
      * </ol>
      *
-     * <p>After successful completion, the operation status is updated accordingly.
-     * This design guarantees that there is always a record of the operation, providing visibility
-     * into whether the import succeeded, partially succeeded, or failed.
-     *
-     * (!!!!!!) Design consideration: In case of main transaction failure, the operation status remains "PROCESSING".
-     * This could be improved by implementing a mechanism to periodically check and update the status of
-     * long-running operations and generate some alerts
      *
      * @param cardNames   the list of card names to import
      * @param operationId the unique identifier of the card import operation
      */
-
-    // Alternate approach to consider: Utilize non-blocking WebFlux client based on Project reactor to handle asynchronous calls more efficiently.
-    // This would allow better resource utilization and scalability, especially under high load.
-    // However, this would require significant changes to the existing synchronous codebase and careful handling of reactive streams.
-    // Reactive programming introduces complexity in development, debugging, and maintenance, so it should be adopted only if the benefits outweigh these challenges.
-    // For simplicity and maintainability, the current approach using @Async is chosen. Moreover, only 1 - 100 card names are typically imported at once (basically two API calls),
-    // so the performance gain from a reactive approach may be negligible in this context.
     @Async
-    @Transactional
+    @Override
     public void importCardsByNames(List<String> cardNames, UUID operationId) {
-        CardImportOperationEntity operationEntity = self.createOperation(operationId);
+        CardImportOperationEntity operation = createOperation(operationId);
 
+        try {
+            Status status = self.doImport(cardNames, operation);
+            operation.setStatus(status);
+            cardImportOperationRepository.save(operation);
+        } catch (RuntimeException e) {
+            log.error("Unexpected error occurred during card import operation {}", operationId, e);
+            operation.setStatus(Status.FAILURE);
+            cardImportOperationRepository.save(operation);
+        }
+    }
+
+    private CardImportOperationEntity createOperation(UUID operationId) {
+        CardImportOperationEntity operation = new CardImportOperationEntity();
+        operation.setOperationId(operationId);
+        operation.setStatus(Status.PROCESSING);
+        return cardImportOperationRepository.save(operation);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Status doImport(List<String> cardNames, CardImportOperationEntity operationEntity) {
         List<CardEntity> cardEntities = new ArrayList<>();
         List<CardImportErrorEntity> errorEntities = new ArrayList<>();
 
@@ -88,7 +99,6 @@ public class CardAsyncImportService {
             try {
                 ScryfallCardsCollectionResponse response = scryfallApiClient.getCardsCollection(request);
 
-                // TODO: refactor
                 if (!CollectionUtils.isEmpty(response.getData())) {
                     cardEntities.addAll(entityMapper.toCardEntities(response.getData(), operationEntity));
                 }
@@ -97,11 +107,11 @@ public class CardAsyncImportService {
                     errorEntities.addAll(entityMapper.toCardImportErrorEntities(response.getNotFound(), operationEntity, CARD_NOT_FOUND_MESSAGE));
                 }
 
-                // TODO: persist more detailed error messages if needed depending on error status code if needed
             } catch (FeignException | CallNotPermittedException e) {
                 log.error("Failed to connect to Scryfall API for batch of {} cards", batchOfCardNames.size(), e);
+                // TODO: persist more detailed error messages if needed depending on error status code if needed
                 // WARNING: EXCEPTION MESSAGE EXPOSES INTERNAL ERROR DETAILS, CONSIDER SECURITY IMPLICATIONS!!!
-                // DO NOT SAVE THE EXCEPTION ITSELF, AS IT MAY CONTAIN SENSITIVE INFORMATION
+                // DO NOT RETURN THE EXCEPTION ITSELF TO THE CLIENT AS IT MAY CONTAIN SENSITIVE INFORMATION
                 errorEntities.addAll(entityMapper.namesToCardImportErrorEntities(batchOfCardNames, operationEntity, e.getMessage()));
             }
         }
@@ -111,19 +121,8 @@ public class CardAsyncImportService {
 
         Status status = resolveStatus(cardEntities, errorEntities);
         log.info("Card import operation {} completed with status: {}. Number of found cards: {}. " +
-                "Number of cards that were not found: {}", operationId, status, cardEntities.size(), errorEntities.size());
-
-        operationEntity.setStatus(status);
-        cardImportOperationRepository.save(operationEntity);
-    }
-
-    // Execute in a new transaction to avoid rollback in case of main transaction failure, so there is always a operation record
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public CardImportOperationEntity createOperation(UUID operationId) {
-        CardImportOperationEntity operation = new CardImportOperationEntity();
-        operation.setOperationId(operationId);
-        operation.setStatus(Status.PROCESSING);
-        return cardImportOperationRepository.save(operation);
+                "Failed to import {} card(s)", operationEntity.getOperationId(), status, cardEntities.size(), errorEntities.size());
+        return status;
     }
 
     private Status resolveStatus(List<CardEntity> cardEntities, List<CardImportErrorEntity> errorEntities) {
